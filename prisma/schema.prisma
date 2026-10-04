@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  admin
+  organiser
+  attendee
+}
+
+model Address {
+  id       String  @id @default(cuid())
+  address1 String
+  address2 String?
+  address3 String?
+  city     String
+  country  String
+  county   String?
+  postcode String
+
+  user    User?
+  session Session?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([city, country])
+  @@map("addresses")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  phoneNumber   String?
+  role          Role      @default(attendee)
+  emailVerified Boolean   @default(false)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+
+  addressId String?  @unique
+  address   Address? @relation(fields: [addressId], references: [id])
+
+  profile Profile?
+  myList  MyList[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deviceTokens  DeviceToken[]
+  notifications Notification[]
+
+  @@index([name, email])
+  @@map("users")
+}
+
+model Profile {
+  id      String  @id @default(cuid())
+  bio     String?
+  website String?
+  notes   String?
+  image   String?
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+model MyList {
+  userId    String
+  sessionId String
+  user      User    @relation(fields: [userId],    references: [id], onDelete: Cascade)
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, sessionId])
+  @@map("my_list")
+}
+
+model Session {
+  id          String    @id @default(cuid())
+  title       String
+  location    String
+  languages   String[]
+  startTime   DateTime
+  endTime     DateTime?
+  description String?
+  imageUrl    String?
+  capacity    Int?
+
+  addressId String?  @unique
+  address   Address? @relation(fields: [addressId], references: [id])
+
+  speakerId String?
+  speaker   Speaker? @relation(fields: [speakerId], references: [id])
+
+  tentId String?
+  tent   Tent?   @relation(fields: [tentId], references: [id])
+
+  myList MyList[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([title, languages])
+  @@map("sessions")
+}
+
+model Speaker {
+  id       String  @id @default(cuid())
+  name     String
+  bio      String?
+  imageUrl String?
+  title    String?
+
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("speakers")
+}
+
+model Pois {
+  id          String  @id @default(cuid())
+  name        String
+  category    String
+  lat         Float
+  lng         Float
+  description String?
+
+  tentId String?
+  tent   Tent?   @relation(fields: [tentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pois")
+}
+
+model Tent {
+  id   String @id @default(cuid())
+  name String
+  pois Pois[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  sessions      Session[]
+  announcements Announcements[]
+
+  @@map("tents")
+}
+
+model Announcements {
+  id             String   @id @default(cuid())
+  title          String
+  message        String
+  targetLanguage String
+  targetCountry  String
+  targetTents    Tent[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("announcements")
+}
+
+model DeviceToken {
+  id       String @id @default(cuid())
+  token    String @unique
+  platform String // 'ios' | 'android'
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+model Notification {
+  id     String  @id @default(cuid())
+  title  String
+  body   String
+  type   String  @default("general")
+  data   Json?
+  isRead Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  code      Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("otp")
+}
